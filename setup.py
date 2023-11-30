@@ -68,11 +68,9 @@ setup(
     packages=find_packages("src"),
     # package_dir={"cicflowmeter": "src/cicflowmeter"},
     package_dir={"": "src"},
-    """
     entry_points={
         "console_scripts": ["cicflowmeter=cicflowmeter.sniffer:main"],
     },
-    """
     install_requires=REQUIRED,
     include_package_data=True,
     license="MIT",
