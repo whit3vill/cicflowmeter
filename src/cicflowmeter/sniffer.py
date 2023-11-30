@@ -6,7 +6,7 @@ from .flow_session import generate_session_class
 
 
 def create_sniffer(
-    input_file, input_interface, output_mode, output_file, url_model=None
+    input_file, output_mode, output_file=None
 ):
     assert (input_file is None) ^ (input_interface is None)
 
@@ -34,6 +34,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     input_group = parser.add_mutually_exclusive_group(required=True)
+    '''
     input_group.add_argument(
         "-i",
         "--interface",
@@ -41,6 +42,7 @@ def main():
         dest="input_interface",
         help="capture online data from INPUT_INTERFACE",
     )
+    '''
 
     input_group.add_argument(
         "-f",
@@ -61,6 +63,7 @@ def main():
         help="output flows as csv",
     )
 
+    '''
     url_model = parser.add_mutually_exclusive_group(required=False)
     url_model.add_argument(
         "-u",
@@ -69,6 +72,7 @@ def main():
         dest="url_model",
         help="URL endpoint for send to Machine Learning Model. e.g http://0.0.0.0:80/prediction",
     )
+    '''
 
     parser.add_argument(
         "output",
@@ -79,10 +83,8 @@ def main():
 
     sniffer = create_sniffer(
         args.input_file,
-        args.input_interface,
         args.output_mode,
         args.output,
-        args.url_model,
     )
     sniffer.start()
 
