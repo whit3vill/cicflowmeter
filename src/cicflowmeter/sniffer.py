@@ -34,7 +34,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     input_group = parser.add_mutually_exclusive_group(required=True)
-    '''
+    """
     input_group.add_argument(
         "-i",
         "--interface",
@@ -42,7 +42,7 @@ def main():
         dest="input_interface",
         help="capture online data from INPUT_INTERFACE",
     )
-    '''
+    """
 
     input_group.add_argument(
         "-f",
@@ -63,7 +63,7 @@ def main():
         help="output flows as csv",
     )
 
-    '''
+    """
     url_model = parser.add_mutually_exclusive_group(required=False)
     url_model.add_argument(
         "-u",
@@ -72,7 +72,7 @@ def main():
         dest="url_model",
         help="URL endpoint for send to Machine Learning Model. e.g http://0.0.0.0:80/prediction",
     )
-    '''
+    """
 
     parser.add_argument(
         "output",
