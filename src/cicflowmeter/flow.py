@@ -216,7 +216,8 @@ class Flow:
 
         if self.start_timestamp != 0:
             self.flow_interarrival_time.append(
-                1e6 * (packet.time - self.latest_timestamp)
+#                1e6 * (packet.time - self.latest_timestamp)
+                1e6 * (float(float(packet.time)) - float(self.latest_timestamp))
             )
 
         self.latest_timestamp = max([packet.time, self.latest_timestamp])
@@ -258,8 +259,8 @@ class Flow:
         if (current_time - self.last_active) > constants.ACTIVE_TIMEOUT:
             duration = abs(float(self.last_active - self.start_active))
             if duration > 0:
-                self.active.append(1e6 * duration)
-            self.idle.append(1e6 * (current_time - self.last_active))
+                self.active.append(1e6 * float(duration))
+            self.idle.append(1e6 * float((current_time - self.last_active)))
             self.start_active = current_time
             self.last_active = current_time
         else:
