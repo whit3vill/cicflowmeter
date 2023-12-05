@@ -46,7 +46,7 @@ folder = "./tests/"
 os.chdir(Path(folder))
 li = []
 
-for file in glob.glob("test2.csv"):
+for file in glob.glob("*.csv"):
     LOGGER.info(f"Reading in {file}...")
     df = pd.read_csv(filepath_or_buffer=file, header=0, sep=",", engine="python")
     
