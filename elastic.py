@@ -9,16 +9,45 @@ from pathlib import Path
 from datetime import datetime
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import streaming_bulk
+from elasticsearch import Elasticsearch
 
 LOG_FORMATTER = logging.Formatter(fmt="%(asctime)s :: %(levelname)s :: %(message)s", datefmt="%H:%M:%S")
 LOGGER = logging.getLogger(__name__)
 
+parser = argparse.ArgumentParser(description="Script to import pcap features CSV into elasticsearch.")
+"""
+parser.add_argument("-e --es_host", dest="es_host", type=str, required=True,
+                        help="Address of the Elasticsearch host. Required.")  
+parser.add_argument("-a --es_api_key", dest="es_api_key", type=str, required=True,
+                        help="API key of the Elasticsearch host. Required.")  
+"""
+parser.add_argument("-i --es_index", dest="es_index", type=str, required=True,
+                        help="Target index to write into. Required.")  
+parser.add_argument("-e --es_host", dest="es_host", type=str, default="https://531f0c9ddb2a44989cabfd8dad39d760.us-central1.gcp.cloud.es.io:443",
+                        help="Address of the Elasticsearch host. Required.")  
+parser.add_argument("-a --es_api_key", dest="es_api_key", type=str, default="bUp6aE00d0I3dGpma1RMSlpjWlo6Y0Vnd3NSMXlSMHUtTWdVTFBRZVFBUQ==",
+                        help="API key of the Elasticsearch host. Required.")  
+params = parser.parse_args()  
+
+ES_HOST = params.es_host
+ES_API_KEY = params.es_api_key
+INDEX_NAME = params.es_index
+
+FILE_HANDLER = logging.FileHandler(Path(f"./run-{datetime.now().strftime('%d-%m-%YT%H-%M-%S')}.log"))
+FILE_HANDLER.setFormatter(LOG_FORMATTER)
+LOGGER.addHandler(FILE_HANDLER)
+
+CONSOLE_HANDLER = logging.StreamHandler()
+CONSOLE_HANDLER.setFormatter(LOG_FORMATTER)
+LOGGER.addHandler(CONSOLE_HANDLER)
+    
 # Reading in the csv files
-folder = "./data/"
+folder = "./tests/"
 os.chdir(Path(folder))
 li = []
 
-for file in glob.glob("*.csv"):
+for file in glob.glob("test2.csv"):
+    LOGGER.info(f"Reading in {file}...")
     df = pd.read_csv(filepath_or_buffer=file, header=0, sep=",", engine="python")
     
     header = []
@@ -31,12 +60,19 @@ for file in glob.glob("*.csv"):
     else:
         df["Timestamp"] = pd.to_datetime(df["Timestamp"], format="%d/%m/%Y %H:%M")
 
+    LOGGER.info(f"{df.info()}")
+    LOGGER.info(f"{df.to_string(max_rows=10, max_cols=100)}")
     li.append(df)
+
 if not li:
+    LOGGER.error("Couldn't find any csv file in the data folder, aborting.")
     exit(1)
+
 df = pd.concat(li, axis=0, ignore_index=True)
 li = []
+LOGGER.info("Finished loading, preprocessing ...")
 
+ # Fill inf values with NaN
 df.replace([np.inf, -np.inf], np.nan, inplace=True)
 # Drop rows with all values NaN
 df.dropna(how="all", inplace=True)
@@ -44,19 +80,13 @@ df.dropna(how="all", inplace=True)
 df.fillna(0, inplace=True)
 # Replace empty and whitespace values with a 0
 df.replace(["", " "], 0, inplace=True)
+LOGGER.info("Finished!")
+LOGGER.debug(f"\n{df.dtypes}")
 
-df = df.head(5)
-print(list(df.columns))
 # Connect to Elasticsearch
-es = Elasticsearch(
-    "https://531f0c9ddb2a44989cabfd8dad39d760.us-central1.gcp.cloud.es.io:443",
-    api_key="bUp6aE00d0I3dGpma1RMSlpjWlo6Y0Vnd3NSMXlSMHUtTWdVTFBRZVFBUQ=="
-)
+es = Elasticsearch(ES_HOST, api_key=ES_API_KEY)
 
-# Index the JSON data
-index_name = "cicids2017"
-doc_type = "flow"
-
+count = 0
 for index, row in df.iterrows():
     body = {
         "@timestamp": row["Timestamp"].strftime('%Y-%m-%dT%H:%M:%S'),
@@ -90,7 +120,7 @@ for index, row in df.iterrows():
             "bytes": row["Total Length of Fwd Packets"] + row["Total Length of Bwd Packets"],
             "packets": row["Total Fwd Packets"] + row["Total Backward Packets"]
         },
-        "CICFlowMeter": {
+        "Flow": {
             "flow_id": row["Flow ID"],
             "down_up_ratio": row["Down/Up Ratio"],
             "fwd": {
@@ -199,9 +229,15 @@ for index, row in df.iterrows():
                 "std": row["Idle Std"],
             }
         },
-        "tags": ["CICIDS2017", row["Label"]],
+        "tags": row["Label"],
         "type": "flow"
     }
 
     json_data = json.dumps(body)
-    print(json_data)
+    response = es.index(index=INDEX_NAME, body=json_data)
+
+    count += 1
+    if count % 1000 == 0:
+        print(f"{count / df.shape[0] * 100:.2f}%...")
+
+LOGGER.info("All done! Exiting.")
