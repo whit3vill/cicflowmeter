@@ -1,4 +1,6 @@
 import argparse
+import pandas as pd
+import numpy as np
 
 from scapy.sendrecv import AsyncSniffer
 
@@ -75,6 +77,15 @@ def main():
         help="output file name (in flow mode) or directory (in sequence mode)",
     )
 
+    parser.add_argument(
+        "-o",
+        "--outputcsv",
+        type=str,
+        dest="output_csv",
+        required=False,
+        help="output csv for Machine Learning Model.",
+    )
+
     args = parser.parse_args()
 
     sniffer = create_sniffer(
@@ -92,6 +103,12 @@ def main():
         sniffer.stop()
     finally:
         sniffer.join()
+    
+    if args.output_csv is not None:
+        df= pd.read_csv(args.output)
+        #drop multiple columns
+        df.drop(df.columns[[0, 1, 2, 3, 5, 6]], axis=1, inplace=True)
+        df.to_csv(args.output_csv, index=False, header=False)
 
 
 if __name__ == "__main__":
